@@ -1,0 +1,15 @@
+[SddmGreeterTheme]
+Name=Spidey
+Description=Miles Morales animasyonlu giriş teması (Qt6)
+Author=ygzztrk
+License=CC-BY-SA
+Type=sddm-theme
+Version=1.0
+Website=
+Screenshot=assets/idle_first.jpg
+MainScript=Main.qml
+ConfigFile=theme.conf
+TranslationsDirectory=translations
+Theme-Id=spidey
+Theme-API=2.0
+QtVersion=6
