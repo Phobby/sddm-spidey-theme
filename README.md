@@ -6,9 +6,7 @@ that's where you type your password.
 
 I wanted my laptop to feel a little more like New York every time I turned it on. This is the result.
 
-![Miles on the antenna, waiting for you](docs/idle.jpg)
-
-![Mid-fall, checking his phone while you log in](docs/password.jpg)
+![The whole thing in 25 seconds: pick a user, jump, type, get shaken at, power menu, back up](docs/demo.webp)
 
 ## 🕸️ What happens when you log in
 
@@ -23,6 +21,10 @@ I wanted my laptop to feel a little more like New York every time I turned it on
    the antenna.
 
 The power button (sleep, restart, shut down) lives in the bottom corner of the password card.
+
+| Waiting on the antenna | Mid-fall, checking his phone |
+|---|---|
+| ![Idle screen](docs/idle.jpg) | ![Password card](docs/password.jpg) |
 
 ## 🏙️ Install
 
