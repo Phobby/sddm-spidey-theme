@@ -1,8 +1,9 @@
 import QtQuick
+import QtQml
 import "components"
 
 // Spidey — SDDM (Qt6) teması
-// Akış: idle (döngü) → jump (bir kez) → phone (son karede donar + şifre) → giriş
+// Akış: idle (döngü) → jump (bir kez) → phone (giriş + döngü, şifre kartı) → giriş
 Rectangle {
     id: root
     width: 1920
@@ -19,20 +20,64 @@ Rectangle {
         return v === true || String(v).toLowerCase() === "true"
     }
 
-    readonly property real s: height / 1080
-    readonly property string fontFamily: cfg("font", fontMedium.name || "sans-serif")
-    readonly property color accent: cfg("accentColor", "#e8363f")
-    readonly property real panelWidth: Number(cfg("panelWidth", 400)) * s
+    // Tüm boyutlar ekran yüksekliğine oranlı (1440p referans).
+    readonly property real uiScale: Math.max(0.5, Number(cfg("uiScale", 1.0)))
+    readonly property real s: height / 1440 * uiScale
+    readonly property string fontFamily: cfg("fontFamily", fontLight.name || "sans-serif")
+    readonly property color accent: cfg("accentColor", "#b9a6ff")
+    readonly property real cardOpacity: Math.max(0, Math.min(1, Number(cfg("cardOpacity", 0.55))))
+    readonly property real blurAmount: Math.max(0, Math.min(1, Number(cfg("blurAmount", 0.8))))
+    readonly property real cardWidth: Math.max(0.15, Math.min(0.6, Number(cfg("cardWidth", 0.25)))) * width
     readonly property bool panelLeft: String(cfg("panelSide", "right")).toLowerCase() === "left"
-    readonly property real blurAmount: Math.max(0, Math.min(1, Number(cfg("blur", 0.7))))
-    readonly property string powerPos: String(cfg("powerButtons", "panel")).toLowerCase()
-    readonly property bool showClock: cfgBool("showClock", true)
-    readonly property real margin: 72 * s
+    readonly property string clockFormat: cfg("clockFormat", "HH:mm")
+    readonly property string dateFormat: cfg("dateFormat", "MMM d")
+    readonly property var uiLocale: Qt.locale(cfg("locale", "en_US"))
+    // Panelin yatay merkezi: videoda karakterin boş bıraktığı taraf
+    readonly property real panelCenterX: panelLeft ? width * 0.23 : width * 0.77
     readonly property bool isPrimary: typeof primaryScreen === "undefined" || primaryScreen
 
-    FontLoader { id: fontMedium; source: "assets/fonts/Rajdhani-Medium.ttf" }
+    FontLoader { id: fontLight; source: "assets/fonts/Rajdhani-Light.ttf" }
+    FontLoader { source: "assets/fonts/Rajdhani-Medium.ttf" }
     FontLoader { source: "assets/fonts/Rajdhani-SemiBold.ttf" }
     FontLoader { source: "assets/fonts/Rajdhani-Bold.ttf" }
+
+    // ---- Saat (dakika başında güncellenir) ----------------------------------
+    property date now: new Date()
+    Timer {
+        id: minuteTimer
+        running: true
+        triggeredOnStart: true
+        onTriggered: {
+            root.now = new Date()
+            interval = 60000 - (root.now.getSeconds() * 1000 + root.now.getMilliseconds()) + 50
+            restart()
+        }
+    }
+
+    // ---- Kullanıcı seçimi: tek kaynak ----------------------------------------
+    Instantiator {
+        id: userList
+        model: userModel
+        delegate: QtObject {
+            required property var model
+            readonly property string name: model.name
+            readonly property string realName: model.realName ? model.realName : ""
+            readonly property string displayName: realName.length ? realName : name
+            readonly property url icon: model.icon ? model.icon : ""
+        }
+    }
+    readonly property int userCount: userList.count
+    property int selectedUserIndex: userModel.lastIndex >= 0 ? userModel.lastIndex : 0
+    readonly property var selectedUser: {
+        var dep = userList.count
+        return userList.objectAt(selectedUserIndex)
+    }
+    readonly property int sessionIndex: sessionModel.lastIndex >= 0 ? sessionModel.lastIndex : 0
+
+    function selectUser(step) {
+        if (userCount < 1) return
+        selectedUserIndex = (selectedUserIndex + step + userCount) % userCount
+    }
 
     // ---- Durum makinesi -----------------------------------------------------
     state: "idle"
@@ -102,8 +147,8 @@ Rectangle {
         state = "phone"
         phoneLayer.start()
         crossfadeTo(phoneLayer, 150)
-        passwordPanel.clear()
-        passwordPanel.focusField()
+        passwordCard.clear()
+        passwordCard.focusField()
     }
 
     // Giriş klibi yavaşlayarak durur → aynı kareden başlayan döngüye geç
@@ -121,25 +166,35 @@ Rectangle {
         state = "phone"
         phoneLoopLayer.restart()
         crossfadeTo(phoneLoopLayer, 300)
-        passwordPanel.clear()
-        passwordPanel.focusField()
+        passwordCard.clear()
+        passwordCard.focusField()
         if (firstChar)
-            passwordPanel.insertText(firstChar)
+            passwordCard.insertText(firstChar)
     }
 
     function goIdle() {
         if (state !== "jump" && state !== "phone")
             return
         state = "idle"
-        passwordPanel.busy = false
-        passwordPanel.clear()
+        passwordCard.closePowerMenu()
+        passwordCard.busy = false
+        passwordCard.clear()
         idleLayer.restart()
         crossfadeTo(idleLayer, 300)
         keyCatcher.forceActiveFocus()
     }
 
     function login(password) {
-        sddm.login(userPanel.userName, password, userPanel.sessionIndex)
+        var u = selectedUser
+        sddm.login(u ? u.name : "", password, sessionIndex)
+    }
+
+    // ESC: önce güç menüsünü kapat, değilse IDLE'a dön
+    function handleEscape() {
+        if (passwordCard.powerMenuOpen)
+            passwordCard.closePowerMenu()
+        else
+            goIdle()
     }
 
     function isTypedChar(event) {
@@ -151,7 +206,7 @@ Rectangle {
     Connections {
         target: sddm
         function onLoginFailed() {
-            passwordPanel.fail("Yanlış şifre")
+            passwordCard.fail()
         }
         function onLoginSucceeded() {
             root.state = "done"
@@ -230,24 +285,21 @@ Rectangle {
         focus: true
         Keys.onPressed: (event) => {
             if (event.key === Qt.Key_Escape) {
-                root.goIdle()
+                root.handleEscape()
                 event.accepted = true
             } else if (root.state === "idle" && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space)) {
                 root.goJump()
                 event.accepted = true
             } else if (root.state === "idle" && (event.key === Qt.Key_Up || event.key === Qt.Key_Down)) {
-                var n = userPanel.userIndex + (event.key === Qt.Key_Up ? -1 : 1)
-                var count = userModel.count !== undefined ? userModel.count : userModel.rowCount()
-                if (n >= 0 && n < count)
-                    userPanel.userIndex = n
+                root.selectUser(event.key === Qt.Key_Up ? -1 : 1)
                 event.accepted = true
             } else if (root.isTypedChar(event)) {
                 if (root.state === "idle" || root.state === "jump") {
                     root.goPhoneLoop(event.text)
                 } else if (root.state === "phone") {
                     // fokus alandan kaçtıysa yazılan harf kaybolmasın
-                    passwordPanel.focusField()
-                    passwordPanel.insertText(event.text)
+                    passwordCard.focusField()
+                    passwordCard.insertText(event.text)
                 }
                 event.accepted = true
             } else if (root.state === "jump" && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)) {
@@ -263,72 +315,67 @@ Rectangle {
         anchors.fill: parent
         visible: root.isPrimary
 
-        Clock {
-            id: clock
-            anchors.left: parent.left
-            anchors.top: parent.top
-            anchors.leftMargin: 48 * root.s
-            anchors.topMargin: 40 * root.s
-            s: root.s
-            fontFamily: root.fontFamily
-            timeFormat: root.cfg("clockFormat", "HH:mm")
-            dateFormat: root.cfg("dateFormat", "d MMMM dddd")
-            locale: Qt.locale(root.cfg("locale", ""))
-            visible: root.showClock && opacity > 0
-            opacity: root.state === "idle" ? 1 : 0
-            Behavior on opacity { NumberAnimation { duration: 300 } }
-        }
-
-        UserPanel {
-            id: userPanel
-            width: root.panelWidth
+        // AŞAMA 1 — cam panel: saat, tarih, kullanıcı (tıklamaları yutmaz: panele tıklamak da zıplatır)
+        IdlePanel {
+            id: idlePanel
+            x: root.panelCenterX - width / 2
             anchors.verticalCenter: parent.verticalCenter
-            x: root.panelLeft ? root.margin : parent.width - width - root.margin
+            width: implicitWidth
             s: root.s
-            accent: root.accent
             fontFamily: root.fontFamily
+            accent: root.accent
+            now: root.now
+            clockFormat: root.clockFormat
+            dateFormat: root.dateFormat
+            locale: root.uiLocale
+            users: userList
             backgroundItem: videoStack
             blurAmount: root.blurAmount
-            showPower: root.powerPos === "panel"
+            cardOpacity: root.cardOpacity
+            // 3+ kullanıcı: kart genişliği (açılan avatar grubu sığsın);
+            // 1–2 kullanıcı: içeriğe göre daralır
+            minWidth: root.userCount >= 3 ? root.cardWidth : 0
+            userIndex: root.selectedUserIndex
+            onUserPicked: (index) => root.selectedUserIndex = index
             visible: opacity > 0
             opacity: root.state === "idle" ? 1 : 0
-            Behavior on opacity { NumberAnimation { duration: 300 } }
-            onActivated: root.goJump()
+            Behavior on opacity { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
         }
 
-        PowerBar {
-            id: floatingPower
-            visible: opacity > 0 && root.powerPos !== "panel" && root.powerPos !== "hidden"
-            opacity: root.state === "idle" ? 1 : 0
-            Behavior on opacity { NumberAnimation { duration: 300 } }
-            s: root.s
-            accent: root.accent
-            fontFamily: root.fontFamily
-            x: root.powerPos === "bottom-left" ? 48 * root.s : parent.width - width - 48 * root.s
-            y: root.powerPos === "top-right" ? 40 * root.s : parent.height - height - 40 * root.s
+        // Güç menüsü açıkken kart dışına tıklama onu kapatır (kartın altında)
+        MouseArea {
+            anchors.fill: parent
+            enabled: passwordCard.powerMenuOpen
+            visible: enabled
+            onClicked: passwordCard.closePowerMenu()
         }
 
-        PasswordPanel {
-            id: passwordPanel
-            width: root.panelWidth
+        // AŞAMA 2 — şifre kartı
+        PasswordCard {
+            id: passwordCard
+            width: root.cardWidth
+            x: root.panelCenterX - width / 2
             anchors.verticalCenter: parent.verticalCenter
-            x: root.panelLeft ? root.margin : parent.width - width - root.margin
-            s: root.s
-            accent: root.accent
-            fontFamily: root.fontFamily
             backgroundItem: videoStack
+            s: root.s
+            fontFamily: root.fontFamily
+            accent: root.accent
+            cardOpacity: root.cardOpacity
             blurAmount: root.blurAmount
-            userName: userPanel.userName
-            userRealName: userPanel.userRealName
-            userIcon: userPanel.userIcon
-            sessionName: userPanel.sessionName
+            now: root.now
+            clockFormat: root.clockFormat
+            locale: root.uiLocale
+            userName: root.selectedUser ? root.selectedUser.name : ""
+            canSwitchUser: root.userCount > 1
             visible: opacity > 0
             opacity: root.state === "phone" ? 1 : 0
-            Behavior on opacity { NumberAnimation { duration: 450; easing.type: Easing.OutQuad } }
+            Behavior on opacity { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
             onSubmitted: (password) => root.login(password)
-
-            Keys.onEscapePressed: root.goIdle()
+            // Başka kullanıcı seçmek için ilk ekrana dön (idle videosu + panel)
+            onAnotherUser: root.goIdle()
+            Keys.onEscapePressed: root.handleEscape()
         }
+
     }
 
     // ---- Giriş başarılı → siyaha kararma ------------------------------------

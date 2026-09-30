@@ -9,6 +9,8 @@ Item {
     property color accent: "#e8363f"
     property string fontFamily: ""
     property bool selected: false
+    property color ringColor: Qt.rgba(1, 1, 1, 0.55)
+    property real ringWidth: 1.5
 
     implicitWidth: 48
     implicitHeight: 48
@@ -54,14 +56,14 @@ Item {
         maskSpreadAtMin: 1.0
     }
 
+    // İnce açık renkli kenarlık (seçiliyse vurgu rengi)
     Rectangle {
         anchors.fill: parent
-        anchors.margins: -3
+        anchors.margins: -avatar.ringWidth
         radius: width / 2
         color: "transparent"
-        border.width: 2
-        border.color: avatar.accent
-        opacity: avatar.selected ? 1 : 0
-        Behavior on opacity { NumberAnimation { duration: 150 } }
+        border.width: avatar.ringWidth
+        border.color: avatar.selected ? avatar.accent : avatar.ringColor
+        Behavior on border.color { ColorAnimation { duration: 200; easing.type: Easing.OutCubic } }
     }
 }

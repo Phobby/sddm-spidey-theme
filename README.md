@@ -1,70 +1,104 @@
-# Spidey — SDDM teması (Plasma 6 / Qt6)
+# 🕷️ spidey
 
-Miles Morales'in şehri izleyip aşağı atladığı ve havada telefonunu çıkardığı
-animasyonlu bir giriş ekranı.
+A login screen for SDDM where Miles sits on top of an antenna, stares at the city for a bit,
+and when you finally click, he jumps. Somewhere on the way down he pulls out his phone, and
+that's where you type your password.
 
-- **Idle:** Döngüde oynayan şehir sahnesi. Sağda cam efektli panelde kullanıcı,
-  oturum ve güç butonları yer alır.
-- **Jump:** Ekrana tıklayınca ya da Enter/boşluk tuşuna basınca Spider-Man atlar.
-  Harfe basınca atlama beklenmeden doğrudan şifre ekranına geçilir.
-- **Phone:** Telefonunu çıkarır, yumuşak ve kesintisiz bir döngüde telefona bakar.
-  Şifre kutusu bu sırada açılır. Esc ile başa dönülür.
+I wanted my laptop to feel a little more like New York every time I turned it on. This is the result.
 
-Klipler 2560×1440 çözünürlükte, Real-ESRGAN ile büyütüldü, H.264, sessiz.
+![Miles on the antenna, waiting for you](docs/idle.jpg)
 
-## Kurulum
+![Mid-fall, checking his phone while you log in](docs/password.jpg)
+
+## 🕸️ What happens when you log in
+
+1. **Idle.** The city loops in the background. The panel on the right shows the time, the date
+   and whoever logged in last. If there's more than one account on the machine, hover the
+   avatar and the others fan out. Pick one with the mouse or with ↑ / ↓.
+2. **The jump.** Click anywhere or hit Enter and he goes off the edge. Too slow for you? Just start
+   typing your password. He'll skip straight to the phone part and your first letter
+   lands in the box.
+3. **The phone.** He keeps falling in a slow loop, looking at his screen, while a frosted glass card
+   waits for your password. Wrong password and the card shakes at you. `Esc` takes you back up to
+   the antenna.
+
+The power button (sleep, restart, shut down) lives in the bottom corner of the password card.
+
+## 🏙️ Install
+
+You'll need Plasma 6 / SDDM 0.21+ running on Qt 6, plus Qt Multimedia with the FFmpeg backend. On
+Ubuntu / Kubuntu that's `qml6-module-qtmultimedia` and `qml6-module-qtquick-effects`.
 
 ```bash
-git clone <repo-url> ~/sddm-themes/spidey
-sudo rsync -a --delete --exclude source/ --exclude .git/ ~/sddm-themes/spidey/ /usr/share/sddm/themes/spidey/
+git clone https://github.com/Phobby/sddm-spidey-theme.git ~/sddm-themes/spidey
+
+# try it out first, nothing gets changed
+sddm-greeter-qt6 --test-mode --theme ~/sddm-themes/spidey
+```
+
+Happy with it? Copy it over:
+
+```bash
+sudo rsync -a --delete --exclude source/ --exclude .git/ --exclude docs/ \
+  ~/sddm-themes/spidey/ /usr/share/sddm/themes/spidey/
 sudo chown -R root:root /usr/share/sddm/themes/spidey
 ```
 
-`/etc/sddm.conf.d/` içindeki tema dosyasında:
+Then set it in `/etc/sddm.conf.d/` (whichever file already has a `[Theme]` section wins):
 
 ```ini
 [Theme]
 Current=spidey
 ```
 
-Kurmadan önce test etmek için:
+> **Heads up:** don't symlink the theme from your home folder. The `sddm` user usually can't read
+> your home directory, so the symlink works in test mode and then quietly fails on the real login
+> screen. Ask me how I know.
+
+A couple of things that are normal in test mode: the power buttons don't do anything, and
+logging in never goes through. There's no SDDM daemon behind the test window, so the card just
+unlocks itself again after a few seconds.
+
+## 🎨 Make it yours
+
+Everything lives in `theme.conf`:
+
+| Key | Default | What it does |
+|---|---|---|
+| `accentColor` | `#b9a6ff` | The lilac on the password field, the glow and the unlock button |
+| `cardOpacity` | `0.55` | How dark the glass is |
+| `blurAmount` | `0.8` | How blurry the city is behind the glass (0 to 1) |
+| `cardWidth` | `0.25` | Card width as a fraction of the screen |
+| `panelSide` | `right` | `left` if you'd rather have it on the other side |
+| `uiScale` | `1.0` | Scale everything up or down (sizes are based on 1440p) |
+| `clockFormat` | `HH:mm` | Use `h:mm AP` for 12-hour time |
+| `dateFormat` | `MMM d` | Shows up as "Sep 30" |
+| `locale` | `en_US` | Language for the month names |
+| `fontFamily` | Rajdhani | Any font you have installed |
+
+## 🎬 Rebuilding the clips
+
+The videos are already in `assets/`, so you don't need this. But if you want to tweak the cut points or
+start from scratch, `scripts/prepare_clips.sh` does the whole thing: it downloads the source,
+upscales it to 1440p with Real-ESRGAN, cuts the three scenes and builds the loops.
 
 ```bash
-sddm-greeter-qt6 --test-mode --theme ~/sddm-themes/spidey
+scripts/prepare_clips.sh                     # full run, needs yt-dlp + ffmpeg (+ a Vulkan GPU for the upscale)
+scripts/prepare_clips.sh --reuse-frames      # skip download/upscale, just re-cut
+scripts/prepare_clips.sh --upscale lanczos   # no GPU? this works too, just a bit softer
 ```
 
-> Not: Ev dizinine sembolik link verirsen `sddm` kullanıcısı genellikle ev dizinine
-> erişemediği için tema gerçek giriş ekranında açılmaz. Bu yüzden dosyaları kopyala.
+The phone loop took the most work. The camera goes back and forth, easing to a stop at each end,
+so you never actually see where the loop wraps. If you change the timestamps at the top of the
+script, it's worth watching that part again.
 
-Gereksinimler: SDDM 0.21+ (Qt6), `qml6-module-qtmultimedia` (FFmpeg backend),
-`qml6-module-qtquick-effects`.
+## 🕷️ Credits
 
-## Ayarlar (`theme.conf`)
+- Footage is from **Marvel's Spider-Man: Miles Morales** © Sony Interactive Entertainment /
+  Insomniac Games. It's here for personal use only. Please don't redistribute the clips.
+- Font: [Rajdhani](https://fonts.google.com/specimen/Rajdhani) by Indian Type Foundry (SIL OFL).
+- Upscaling: [Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN).
 
-| Anahtar | Açıklama |
-|---|---|
-| `font` | Font ailesi (boş = gömülü Rajdhani) |
-| `accentColor` | Vurgu rengi |
-| `panelWidth` | Panel genişliği (1080p referansında px) |
-| `panelSide` | `right` / `left` |
-| `blur` | Cam bulanıklığı, 0.0–1.0 |
-| `powerButtons` | `panel` / `bottom-right` / `bottom-left` / `top-right` / `hidden` |
-| `showClock`, `clockFormat`, `dateFormat`, `locale` | Sol üstteki saat ve tarih |
+The code and the script are yours to take apart. If you build something cool with it, I'd love to see it.
 
-## Klipleri yeniden üretmek
-
-```bash
-scripts/prepare_clips.sh              # indir, büyüt, kes, döngüleri üret
-scripts/prepare_clips.sh --reuse-frames   # büyütülmüş master'ı yeniden kullan
-scripts/prepare_clips.sh --upscale lanczos  # GPU yoksa
-```
-
-Kesim noktaları ve döngü parametreleri script'in başındadır. Gerekenler:
-`yt-dlp`, `ffmpeg`, ve isteğe bağlı olarak Vulkan destekli bir GPU (Real-ESRGAN).
-
-## Lisans / telif
-
-Kod ve script serbestçe kullanılabilir. Video karelerinin telifi
-Marvel's Spider-Man: Miles Morales (Sony Interactive Entertainment / Insomniac Games)
-sahiplerine aittir, kişisel kullanım içindir. Font: Rajdhani (SIL OFL,
-`assets/fonts/OFL.txt`).
+*Anyone can wear the mask.* 🕸️

@@ -6,11 +6,29 @@ Item {
     id: glass
 
     property Item backgroundItem
-    property real blurAmount: 0.7
+    property real blurAmount: 0.8
+    property int blurMax: 48
     property real radius: 18
-    property color tint: Qt.rgba(0.06, 0.04, 0.12, 0.38)
-    property color borderColor: Qt.rgba(1, 1, 1, 0.14)
+    property color tint: Qt.rgba(0.10, 0.10, 0.13, 0.55)
+    property color borderColor: Qt.rgba(1, 1, 1, 0.12)
+    property real borderWidth: 1
+    property bool shadowEnabled: true
+    property real shadowSize: 32
+    property color shadowColor: Qt.rgba(0, 0, 0, 0.45)
     default property alias content: inner.data
+
+    property bool blockInput: true   // false: tıklamalar arkadaki alana geçer
+    signal backgroundClicked()
+
+    RectangularShadow {
+        anchors.fill: parent
+        visible: glass.shadowEnabled
+        radius: glass.radius
+        blur: glass.shadowSize
+        spread: 0
+        offset.y: glass.shadowSize * 0.25
+        color: glass.shadowColor
+    }
 
     ShaderEffectSource {
         id: snapshot
@@ -21,7 +39,7 @@ Item {
         sourceItem: glass.backgroundItem
         sourceRect: {
             // x/y/width/height bağımlılıkları: sallanma ve yeniden boyutlanmada güncellensin.
-            var dep = glass.x + glass.y + glass.width + glass.height + (glass.parent ? glass.parent.x : 0)
+            var dep = glass.x + glass.y + glass.width + glass.height + (glass.parent ? glass.parent.x + glass.parent.y : 0)
             if (!glass.backgroundItem)
                 return Qt.rect(0, 0, 0, 0)
             var p = glass.mapToItem(glass.backgroundItem, 0, 0)
@@ -47,8 +65,8 @@ Item {
         autoPaddingEnabled: false
         blurEnabled: glass.blurAmount > 0
         blur: glass.blurAmount
-        blurMax: 64
-        saturation: 0.15
+        blurMax: glass.blurMax
+        saturation: 0.1
         maskEnabled: true
         maskSource: mask
         maskThresholdMin: 0.5
@@ -60,13 +78,15 @@ Item {
         radius: glass.radius
         color: glass.tint
         border.color: glass.borderColor
-        border.width: 1
+        border.width: glass.borderWidth
     }
 
-    // Panel içindeki tıklamalar arkadaki "zıpla" alanına geçmesin.
+    // Panel içindeki tıklamalar arkadaki alana geçmesin.
     MouseArea {
         anchors.fill: parent
+        enabled: glass.blockInput
         acceptedButtons: Qt.AllButtons
+        onClicked: glass.backgroundClicked()
     }
 
     Item {
