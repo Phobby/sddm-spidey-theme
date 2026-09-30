@@ -185,8 +185,8 @@ Rectangle {
     }
 
     function login(password) {
-        var u = selectedUser
-        sddm.login(u ? u.name : "", password, sessionIndex)
+        var name = userCount > 0 && selectedUser ? selectedUser.name : passwordCard.typedUsername
+        sddm.login(name, password, sessionIndex)
     }
 
     // ESC: close the power menu first, otherwise go back to IDLE
@@ -367,6 +367,7 @@ Rectangle {
             locale: root.uiLocale
             userName: root.selectedUser ? root.selectedUser.name : ""
             canSwitchUser: root.userCount > 1
+            askUsername: root.userCount === 0
             visible: opacity > 0
             opacity: root.state === "phone" ? 1 : 0
             Behavior on opacity { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }

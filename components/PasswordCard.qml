@@ -18,6 +18,9 @@ Item {
     property string userName: ""
     property bool canSwitchUser: false
     property bool busy: false
+    // No user list from SDDM (hidden users, LDAP, ...): ask for the username too
+    property bool askUsername: false
+    readonly property string typedUsername: userInput.text.trim()
 
     signal submitted(string password)
     signal anotherUser()
@@ -30,9 +33,18 @@ Item {
     readonly property color errorColor: "#ff5a6a"
     property bool errorFlash: false
 
-    function focusField() { input.forceActiveFocus() }
+    function focusField() {
+        if (askUsername && typedUsername.length === 0)
+            userInput.forceActiveFocus()
+        else
+            input.forceActiveFocus()
+    }
     function clear() { input.text = "" }
-    function insertText(t) { if (!busy) input.insert(input.cursorPosition, t) }
+    function insertText(t) {
+        if (busy) return
+        var target = userInput.activeFocus ? userInput : input
+        target.insert(target.cursorPosition, t)
+    }
     function fail() {
         busy = false
         replyTimeout.stop()
@@ -44,6 +56,10 @@ Item {
     }
     function _submit() {
         if (busy) return
+        if (askUsername && typedUsername.length === 0) {
+            userInput.forceActiveFocus()
+            return
+        }
         busy = true
         replyTimeout.restart()
         root.submitted(input.text)
@@ -99,7 +115,7 @@ Item {
                 }
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: root.userName.toUpperCase()
+                    text: root.askUsername ? "SIGN IN" : root.userName.toUpperCase()
                     color: "white"
                     font.family: root.fontFamily
                     font.weight: Font.Bold
@@ -121,6 +137,53 @@ Item {
                     font.weight: Font.DemiBold
                     font.pixelSize: 13 * root.s
                     font.letterSpacing: 1 * root.s
+                }
+            }
+
+            // b0) username field, only when SDDM gives us no user list
+            Item {
+                id: userField
+                visible: root.askUsername
+                width: parent.width
+                height: 56 * root.s
+                readonly property bool focused: userInput.activeFocus
+
+                Rectangle {
+                    anchors.fill: parent
+                    radius: height / 2
+                    color: Qt.rgba(0, 0, 0, 0.22)
+                    border.width: (userField.focused ? 2 : 1.5) * root.s
+                    border.color: userField.focused ? Qt.lighter(root.accent, 1.15)
+                                : Qt.rgba(root.accent.r, root.accent.g, root.accent.b, 0.5)
+                    Behavior on border.color { ColorAnimation { duration: 200; easing.type: Easing.OutCubic } }
+                }
+                TextInput {
+                    id: userInput
+                    anchors.fill: parent
+                    anchors.leftMargin: 28 * root.s
+                    anchors.rightMargin: 28 * root.s
+                    horizontalAlignment: TextInput.AlignHCenter
+                    verticalAlignment: TextInput.AlignVCenter
+                    color: "white"
+                    selectionColor: root.accent
+                    font.family: root.fontFamily
+                    font.pixelSize: 20 * root.s
+                    font.letterSpacing: 1 * root.s
+                    enabled: !root.busy
+                    clip: true
+                    onAccepted: input.forceActiveFocus()
+                    KeyNavigation.tab: input
+                }
+                Text {
+                    anchors.centerIn: parent
+                    visible: userInput.text.length === 0
+                    text: "USERNAME"
+                    color: "white"
+                    opacity: 0.35
+                    font.family: root.fontFamily
+                    font.weight: Font.DemiBold
+                    font.pixelSize: 14 * root.s
+                    font.letterSpacing: 4 * root.s
                 }
             }
 

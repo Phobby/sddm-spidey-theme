@@ -130,6 +130,7 @@ Item {
             // Main avatar + the other users fanning out from behind it
             Item {
                 id: avatarRow
+                visible: panel.userCount > 0
                 readonly property real mainSize: 104 * panel.s
                 readonly property real otherSize: 64 * panel.s
                 readonly property real gap: 18 * panel.s
@@ -229,6 +230,7 @@ Item {
 
             Text {
                 id: nameText
+                visible: panel.userCount > 0
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: panel.shownUser ? panel.shownUser.displayName : ""
                 color: "white"
