@@ -19,14 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
----
-
-This license covers the source code (QML, shell scripts, config files) and the
-icons in assets/icons. It does NOT cover:
-
-- the video clips, poster frames and screenshots (assets/*.mp4, assets/*.jpg,
-  docs/*), which are derived from Marvel's Spider-Man: Miles Morales,
-  © Sony Interactive Entertainment / Insomniac Games;
-- the Rajdhani font (assets/fonts), licensed under the SIL Open Font License,
-  see assets/fonts/OFL.txt.

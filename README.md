@@ -101,7 +101,7 @@ script, it's worth watching that part again.
 - Font: [Rajdhani](https://fonts.google.com/specimen/Rajdhani) by Indian Type Foundry (SIL OFL).
 - Upscaling: [Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN).
 
-The code and the script are MIT licensed (see [LICENSE](LICENSE)), so take them apart. The footage isn't
+The code and the script are MIT licensed (see [LICENSE](LICENSE) and [NOTICE](NOTICE)), so take them apart. The footage isn't
 covered by that, for obvious reasons. If you build something cool with it, I'd love to see it.
 
 *Anyone can wear the mask.* 🕸️
