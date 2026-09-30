@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Effects
 
-// Arkasındaki videoyu bulanıklaştıran yarı saydam cam panel.
+// Translucent glass panel that blurs the video behind it.
 Item {
     id: glass
 
@@ -17,7 +17,7 @@ Item {
     property color shadowColor: Qt.rgba(0, 0, 0, 0.45)
     default property alias content: inner.data
 
-    property bool blockInput: true   // false: tıklamalar arkadaki alana geçer
+    property bool blockInput: true   // false: clicks pass through to whatever is behind
     signal backgroundClicked()
 
     RectangularShadow {
@@ -38,7 +38,7 @@ Item {
         hideSource: false
         sourceItem: glass.backgroundItem
         sourceRect: {
-            // x/y/width/height bağımlılıkları: sallanma ve yeniden boyutlanmada güncellensin.
+            // x/y/width/height dependencies so it updates while shaking or resizing.
             var dep = glass.x + glass.y + glass.width + glass.height + (glass.parent ? glass.parent.x + glass.parent.y : 0)
             if (!glass.backgroundItem)
                 return Qt.rect(0, 0, 0, 0)
@@ -81,7 +81,7 @@ Item {
         border.width: glass.borderWidth
     }
 
-    // Panel içindeki tıklamalar arkadaki alana geçmesin.
+    // Keep clicks inside the panel from reaching whatever is behind it.
     MouseArea {
         anchors.fill: parent
         enabled: glass.blockInput

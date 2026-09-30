@@ -1,8 +1,8 @@
 import QtQuick
 import QtQuick.Effects
 
-// AŞAMA 1: saat, tarih, seçili kullanıcının avatarı ve adı.
-// Blurlu cam arka plan üzerinde; tıklamaları yutmaz, panele tıklamak da zıplatır.
+// STAGE 1: clock, date, selected user's avatar and name.
+// Sits on blurred glass; doesn't swallow clicks, so clicking the panel also jumps.
 Item {
     id: panel
 
@@ -14,14 +14,14 @@ Item {
     property string dateFormat: "MMM d"
     property var locale: Qt.locale("en_US")
     property var users            // Instantiator: objectAt(i).name / realName / icon
-    property Item backgroundItem  // cam arka plan için bulanıklaştırılacak video
+    property Item backgroundItem  // video to blur for the glass background
     property real blurAmount: 0.8
     property real cardOpacity: 0.55
     property real minWidth: 0
     property int userIndex: 0
     readonly property int userCount: users ? users.count : 0
 
-    // Görünen kullanıcı, seçimin gerisinden gelir: önce eski kaybolur, sonra yeni belirir.
+    // The shown user lags behind the selection: the old one fades out, then the new one fades in.
     property int shownIndex: 0
     Component.onCompleted: shownIndex = userIndex
     readonly property var shownUser: {
@@ -29,14 +29,14 @@ Item {
         return users && shownIndex >= 0 ? users.objectAt(shownIndex) : null
     }
     property int _dir: 1
-    // Kullanıcı değişim animasyonu yalnızca ana avatar + isme uygulanır
+    // The user switch animation only applies to the main avatar + name
     property real swapOpacity: 1
     property real swapSlide: 0
 
     signal userPicked(int index)
 
-    // Ana avatarın üzerine gelince diğer kullanıcılar iki yana açılır;
-    // grup alanından çıkınca kısa bir gecikmeyle kapanır.
+    // Hovering the main avatar fans the other users out to both sides;
+    // leaving the group closes it after a short delay.
     property bool othersOpen: false
     readonly property bool _wantOpen: userCount > 1 && (mainHover.hovered || (othersOpen && groupHover.hovered))
     on_WantOpenChanged: {
@@ -56,7 +56,7 @@ Item {
     onUserIndexChanged: {
         if (userIndex === shownIndex || userCount < 1)
             return
-        // Wrap durumunda da hareket yönü basılan oka uysun.
+        // Keep the slide direction matching the arrow key, even when wrapping.
         var fwd = (userIndex - shownIndex + userCount) % userCount
         _dir = fwd <= userCount / 2 ? 1 : -1
         swap.restart()
@@ -80,8 +80,8 @@ Item {
         }
     }
 
-    // Şifre kartıyla aynı blurlu cam arka plan; tıklamaları yutmaz (panele
-    // tıklamak da zıplatır).
+    // Same blurred glass as the password card; doesn't swallow clicks
+    // (clicking the panel also jumps).
     GlassPanel {
         id: glass
         anchors.fill: parent
@@ -127,7 +127,7 @@ Item {
             anchors.horizontalCenter: parent.horizontalCenter
             spacing: 12 * panel.s
 
-            // Ana avatar + arkasından iki yana açılan diğer kullanıcılar
+            // Main avatar + the other users fanning out from behind it
             Item {
                 id: avatarRow
                 readonly property real mainSize: 104 * panel.s
@@ -141,7 +141,7 @@ Item {
                 width: mainSize + 2 * perSide * (otherSize + gap)
                 height: mainSize
 
-                // Açıkken grubun tamamı hover alanı
+                // While open, the whole group counts as the hover area
                 HoverHandler { id: groupHover }
 
                 Repeater {
@@ -154,7 +154,7 @@ Item {
                             var dep = panel.userCount
                             return panel.users ? panel.users.objectAt(index) : null
                         }
-                        // Diğerleri arasındaki sıra: 0 sağ, 1 sol, 2 sağ...
+                        // Order among the others: 0 right, 1 left, 2 right...
                         readonly property int k: index < panel.shownIndex ? index : index - 1
                         readonly property int side: k % 2 === 0 ? 1 : -1
                         readonly property int slot: Math.floor(k / 2)
@@ -166,7 +166,7 @@ Item {
                         width: avatarRow.otherSize
                         height: width
                         y: (avatarRow.height - height) / 2
-                        // Kapalıyken ana avatarın arkasında saklı
+                        // Hidden behind the main avatar when closed
                         x: (panel.othersOpen ? openCenter : avatarRow.width / 2) - width / 2
                         z: hovered ? 5 : 1
                         opacity: panel.othersOpen ? (hovered ? 1 : 0.8) : 0
@@ -196,7 +196,7 @@ Item {
                             font.weight: Font.DemiBold
                             font.pixelSize: 13 * panel.s
                         }
-                        // Tıklama o kullanıcıyı seçer (zıplamayı başlatmaz)
+                        // Clicking selects that user (doesn't start the jump)
                         MouseArea {
                             id: otherArea
                             anchors.fill: parent

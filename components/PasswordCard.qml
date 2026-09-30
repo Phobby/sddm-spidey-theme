@@ -1,8 +1,8 @@
 import QtQuick
 import QtQuick.Effects
 
-// AŞAMA 2: blurlu cam kart — kullanıcı/saat satırı, kapsül şifre alanı,
-// ANOTHER USER / UNLOCK butonları.
+// STAGE 2: blurred glass card — user/time row, pill password field,
+// ANOTHER USER / UNLOCK buttons.
 Item {
     id: root
 
@@ -51,7 +51,7 @@ Item {
     onBusyChanged: if (!busy) replyTimeout.stop()
 
     Timer { id: errorTimer; interval: 900; onTriggered: root.errorFlash = false }
-    // Daemon yanıt vermezse (ör. --test-mode) kart kilitli kalmasın.
+    // If the daemon never answers (e.g. --test-mode), don't leave the card locked.
     Timer { id: replyTimeout; interval: 15000; onTriggered: root.fail() }
 
     property real shakeOffset: 0
@@ -85,7 +85,7 @@ Item {
             anchors.margins: 30 * root.s
             spacing: 22 * root.s
 
-            // a) kilit · KULLANICI · saat
+            // a) lock · USERNAME · time
             Row {
                 anchors.horizontalCenter: parent.horizontalCenter
                 spacing: 8 * root.s
@@ -124,14 +124,14 @@ Item {
                 }
             }
 
-            // b) kapsül şifre alanı
+            // b) pill-shaped password field
             Item {
                 id: field
                 width: parent.width
                 height: 56 * root.s
                 readonly property bool focused: input.activeFocus
 
-                // Fokus parıltısı
+                // Focus glow
                 RectangularShadow {
                     anchors.fill: parent
                     radius: height / 2
@@ -235,7 +235,7 @@ Item {
                     Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
                     Behavior on scale { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
 
-                    // Hover parıltısı
+                    // Hover glow
                     RectangularShadow {
                         anchors.fill: parent
                         z: -1
@@ -282,7 +282,7 @@ Item {
                 }
             }
 
-            // d) alt satır: ayırıcı + ipucu + güç menüsü (kartın içinde)
+            // d) bottom row: divider + hint + power menu (inside the card)
             Rectangle {
                 width: parent.width
                 height: 1

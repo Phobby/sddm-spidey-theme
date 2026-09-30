@@ -2,8 +2,8 @@ import QtQuick
 import QtQml
 import "components"
 
-// Spidey — SDDM (Qt6) teması
-// Akış: idle (döngü) → jump (bir kez) → phone (giriş + döngü, şifre kartı) → giriş
+// Spidey — SDDM (Qt6) theme
+// Flow: idle (loop) → jump (once) → phone (intro + loop, password card) → login
 Rectangle {
     id: root
     width: 1920
@@ -20,7 +20,7 @@ Rectangle {
         return v === true || String(v).toLowerCase() === "true"
     }
 
-    // Tüm boyutlar ekran yüksekliğine oranlı (1440p referans).
+    // All sizes scale with screen height (1440p reference).
     readonly property real uiScale: Math.max(0.5, Number(cfg("uiScale", 1.0)))
     readonly property real s: height / 1440 * uiScale
     readonly property string fontFamily: cfg("fontFamily", fontLight.name || "sans-serif")
@@ -32,7 +32,7 @@ Rectangle {
     readonly property string clockFormat: cfg("clockFormat", "HH:mm")
     readonly property string dateFormat: cfg("dateFormat", "MMM d")
     readonly property var uiLocale: Qt.locale(cfg("locale", "en_US"))
-    // Panelin yatay merkezi: videoda karakterin boş bıraktığı taraf
+    // Horizontal center of the panel: the side the character leaves empty
     readonly property real panelCenterX: panelLeft ? width * 0.23 : width * 0.77
     readonly property bool isPrimary: typeof primaryScreen === "undefined" || primaryScreen
 
@@ -41,7 +41,7 @@ Rectangle {
     FontLoader { source: "assets/fonts/Rajdhani-SemiBold.ttf" }
     FontLoader { source: "assets/fonts/Rajdhani-Bold.ttf" }
 
-    // ---- Saat (dakika başında güncellenir) ----------------------------------
+    // ---- Clock (updates at the top of each minute) ---------------------------
     property date now: new Date()
     Timer {
         id: minuteTimer
@@ -54,7 +54,7 @@ Rectangle {
         }
     }
 
-    // ---- Kullanıcı seçimi: tek kaynak ----------------------------------------
+    // ---- User selection: single source of truth ------------------------------
     Instantiator {
         id: userList
         model: userModel
@@ -79,7 +79,7 @@ Rectangle {
         selectedUserIndex = (selectedUserIndex + step + userCount) % userCount
     }
 
-    // ---- Durum makinesi -----------------------------------------------------
+    // ---- State machine -------------------------------------------------------
     state: "idle"
     states: [
         State { name: "idle" },
@@ -92,7 +92,7 @@ Rectangle {
     property Item currentLayer: idleLayer
     readonly property var allLayers: [idleLayer, jumpLayer, phoneLayer, phoneLoopLayer]
 
-    // Katmanı en üste al ve opacity ile aç. Alttakiler geçiş bitince gizlenir.
+    // Bring the layer to the top and fade it in. The ones below get hidden when it's done.
     function crossfadeTo(layer, ms) {
         if (currentLayer === layer && layer.opacity === 1)
             return
@@ -113,8 +113,8 @@ Rectangle {
         onFinished: root.afterFade()
     }
 
-    // Geçiş bitince görünmeyen katmanları gizle ve durdur; idle'a dönüldüyse
-    // sonraki klipleri başa sarıp ilk karelerinde hazır beklet.
+    // After a crossfade, hide and pause the layers you can't see; when back in idle,
+    // rewind the next clips and park them on their first frame.
     function afterFade() {
         for (var i = 0; i < allLayers.length; i++) {
             var l = allLayers[i]
@@ -137,10 +137,10 @@ Rectangle {
         }
         state = "jump"
         jumpLayer.start()
-        crossfadeTo(jumpLayer, 300)   // idle'ın rastgele karesinden geçişi gizler
+        crossfadeTo(jumpLayer, 300)   // hides the jump from a random idle frame
     }
 
-    // jump bitti → telefonu çıkarma (giriş) klibi; ardışık kesitler, kısa overlap
+    // jump finished → phone intro clip; the cuts are contiguous, so a short overlap is enough
     function goPhone() {
         if (state !== "jump")
             return
@@ -151,7 +151,7 @@ Rectangle {
         passwordCard.focusField()
     }
 
-    // Giriş klibi yavaşlayarak durur → aynı kareden başlayan döngüye geç
+    // The intro eases to a stop → switch to the loop that starts on that same frame
     function startPhoneLoop() {
         if (state !== "phone" || currentLayer === phoneLoopLayer)
             return
@@ -159,7 +159,7 @@ Rectangle {
         crossfadeTo(phoneLoopLayer, 150)
     }
 
-    // Beklemek istemeyen kullanıcı harfe bastı: doğrudan telefona bakma anına
+    // Impatient user typed a letter: jump straight to the phone loop
     function goPhoneLoop(firstChar) {
         if (!isPrimary || (state !== "idle" && state !== "jump"))
             return
@@ -189,7 +189,7 @@ Rectangle {
         sddm.login(u ? u.name : "", password, sessionIndex)
     }
 
-    // ESC: önce güç menüsünü kapat, değilse IDLE'a dön
+    // ESC: close the power menu first, otherwise go back to IDLE
     function handleEscape() {
         if (passwordCard.powerMenuOpen)
             passwordCard.closePowerMenu()
@@ -213,7 +213,7 @@ Rectangle {
         }
     }
 
-    // ---- Video katmanları ---------------------------------------------------
+    // ---- Video layers --------------------------------------------------------
     Item {
         id: videoStack
         anchors.fill: parent
@@ -270,8 +270,8 @@ Rectangle {
         }
     }
 
-    // ---- Etkileşim ----------------------------------------------------------
-    // Panel dışına tıklama → zıpla
+    // ---- Interaction ---------------------------------------------------------
+    // Click anywhere → jump
     MouseArea {
         anchors.fill: parent
         enabled: root.state === "idle"
@@ -297,7 +297,7 @@ Rectangle {
                 if (root.state === "idle" || root.state === "jump") {
                     root.goPhoneLoop(event.text)
                 } else if (root.state === "phone") {
-                    // fokus alandan kaçtıysa yazılan harf kaybolmasın
+                    // if the field lost focus, don't lose the typed character
                     passwordCard.focusField()
                     passwordCard.insertText(event.text)
                 }
@@ -315,7 +315,7 @@ Rectangle {
         anchors.fill: parent
         visible: root.isPrimary
 
-        // AŞAMA 1 — cam panel: saat, tarih, kullanıcı (tıklamaları yutmaz: panele tıklamak da zıplatır)
+        // STAGE 1 — glass panel: clock, date, user (doesn't swallow clicks: clicking it also jumps)
         IdlePanel {
             id: idlePanel
             x: root.panelCenterX - width / 2
@@ -332,8 +332,8 @@ Rectangle {
             backgroundItem: videoStack
             blurAmount: root.blurAmount
             cardOpacity: root.cardOpacity
-            // 3+ kullanıcı: kart genişliği (açılan avatar grubu sığsın);
-            // 1–2 kullanıcı: içeriğe göre daralır
+            // 3+ users: card width (so the avatar fan fits);
+            // 1–2 users: shrink to fit the content
             minWidth: root.userCount >= 3 ? root.cardWidth : 0
             userIndex: root.selectedUserIndex
             onUserPicked: (index) => root.selectedUserIndex = index
@@ -342,7 +342,7 @@ Rectangle {
             Behavior on opacity { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
         }
 
-        // Güç menüsü açıkken kart dışına tıklama onu kapatır (kartın altında)
+        // With the power menu open, clicking outside the card closes it (sits below the card)
         MouseArea {
             anchors.fill: parent
             enabled: passwordCard.powerMenuOpen
@@ -350,7 +350,7 @@ Rectangle {
             onClicked: passwordCard.closePowerMenu()
         }
 
-        // AŞAMA 2 — şifre kartı
+        // STAGE 2 — password card
         PasswordCard {
             id: passwordCard
             width: root.cardWidth
@@ -371,14 +371,14 @@ Rectangle {
             opacity: root.state === "phone" ? 1 : 0
             Behavior on opacity { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
             onSubmitted: (password) => root.login(password)
-            // Başka kullanıcı seçmek için ilk ekrana dön (idle videosu + panel)
+            // Go back to the first screen to pick another user (idle video + panel)
             onAnotherUser: root.goIdle()
             Keys.onEscapePressed: root.handleEscape()
         }
 
     }
 
-    // ---- Giriş başarılı → siyaha kararma ------------------------------------
+    // ---- Login succeeded → fade to black -------------------------------------
     Rectangle {
         anchors.fill: parent
         color: "black"

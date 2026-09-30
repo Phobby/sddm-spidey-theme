@@ -1,6 +1,6 @@
 import QtQuick
 
-// Yuvarlak ikon butonu (güç butonları, oklar).
+// Round icon button (power buttons, arrows).
 Item {
     id: btn
     property url icon
@@ -18,7 +18,7 @@ Item {
     readonly property bool hovered: area.containsMouse
     property bool highlight: false      // vurgu renginde, daha belirgin stil
 
-    // Hover parıltısı
+    // Hover glow
     Rectangle {
         anchors.centerIn: bg
         width: bg.width * 1.24

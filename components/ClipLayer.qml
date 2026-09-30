@@ -1,17 +1,17 @@
 import QtQuick
 import QtMultimedia
 
-// Tek bir video klibi: MediaPlayer + VideoOutput + poster kareler.
-// Poster, VideoOutput'un altında durur; ilk kare gelene kadar siyah yerine o görünür.
+// A single video clip: MediaPlayer + VideoOutput + poster frames.
+// The poster sits under the VideoOutput, so it shows instead of black until the first frame arrives.
 Item {
     id: layer
 
     property url source
-    property url poster                 // ilk kare (video hazır değilken)
-    property url endPoster              // son kare (EndOfMedia sonrası backend kareyi bırakırsa)
+    property url poster                 // first frame (shown while the video isn't ready)
+    property url endPoster              // last frame (in case the backend drops it after EndOfMedia)
     property bool looping: false
-    property bool freezeAtEnd: false    // sona ~2 kare kala durdur, son karede kal
-    property real endLead: 0            // bitişten bu kadar saniye önce nearEnd() yayınla
+    property bool freezeAtEnd: false    // pause ~2 frames before the end and hold there
+    property real endLead: 0            // emit nearEnd() this many seconds before the end
 
     readonly property bool failed: player.error !== MediaPlayer.NoError
     readonly property bool playing: player.playbackState === MediaPlayer.PlayingState
@@ -25,7 +25,7 @@ Item {
     signal nearEnd()
     signal finished()
 
-    // Başa sar ve ilk karede beklet (ön yükleme).
+    // Rewind and hold on the first frame (preload).
     function prepare() {
         _reset()
         player.setPosition(0)
@@ -86,7 +86,7 @@ Item {
         id: player
         source: layer.source
         videoOutput: output
-        // Ses yok: audioOutput atanmadı.
+        // No audio: no audioOutput assigned.
         loops: layer.looping ? MediaPlayer.Infinite : 1
 
         onPositionChanged: {
@@ -110,8 +110,8 @@ Item {
             }
         }
         onErrorOccurred: (error, errorString) => {
-            console.warn("spidey: video hatası", layer.source, errorString)
-            // Video oynatılamazsa akış takılmasın.
+            console.warn("spidey: video error", layer.source, errorString)
+            // Don't let the flow get stuck if a video can't play.
             layer._fireFinished()
         }
     }

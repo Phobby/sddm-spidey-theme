@@ -1,7 +1,7 @@
 import QtQuick
 
-// Yuvarlak güç butonu; tıklanınca Kapat / Yeniden başlat / Uyku butonları
-// güç butonunun arkasından çıkıp sırayla sola doğru kayarak açılır.
+// Round power button; on click, Shut down / Restart / Sleep slide out
+// from behind it one after another, moving to the left.
 Item {
     id: menu
 
@@ -15,8 +15,8 @@ Item {
     readonly property real btnSize: 46 * s
     readonly property real gap: 12 * s
 
-    // SDDM hiçbir güç işlemini desteklemiyor görünüyorsa (ör. --test-mode'da
-    // daemon yok) hepsini göster; aksi halde desteklenmeyenleri gizle.
+    // If SDDM reports no power actions at all (e.g. --test-mode, no daemon)
+    // show them all; otherwise hide the unsupported ones.
     readonly property bool _anyKnown: sddm.canPowerOff || sddm.canReboot || sddm.canSuspend
     readonly property var _items: {
         var list = []
@@ -48,13 +48,13 @@ Item {
             readonly property real closedX: menu.width - menu.btnSize
 
             width: menu.btnSize
-            // Kapalıyken güç butonunun arkasında saklı; açılınca sola kayar.
+            // Hidden behind the power button when closed; slides left when opened.
             x: menu.open ? openX : closedX
             opacity: menu.open ? 1 : 0
             scale: menu.open ? 1 : 0.6
             visible: opacity > 0
             enabled: menu.open
-            // Uzaktaki buton biraz daha geç varır → kademeli açılış
+            // Farther buttons arrive a bit later → staggered opening
             Behavior on x { NumberAnimation { duration: 180 + index * 50; easing.type: Easing.OutCubic } }
             Behavior on opacity { NumberAnimation { duration: 160 + index * 50; easing.type: Easing.OutCubic } }
             Behavior on scale { NumberAnimation { duration: 180 + index * 50; easing.type: Easing.OutCubic } }

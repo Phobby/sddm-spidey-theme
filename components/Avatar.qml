@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Effects
 
-// Yuvarlak kullanıcı avatarı; resim okunamazsa baş harf gösterir.
+// Round user avatar; falls back to the initial if the image can't be read.
 Item {
     id: avatar
     property url source
@@ -56,7 +56,7 @@ Item {
         maskSpreadAtMin: 1.0
     }
 
-    // İnce açık renkli kenarlık (seçiliyse vurgu rengi)
+    // Thin light ring (accent color when selected)
     Rectangle {
         anchors.fill: parent
         anchors.margins: -avatar.ringWidth
